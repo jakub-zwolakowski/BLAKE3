@@ -11,7 +11,7 @@ HERE = path.dirname(__file__)
 TEST_VECTORS_PATH = path.join(HERE, "..", "test_vectors", "test_vectors.json")
 TEST_VECTORS = json.load(open(TEST_VECTORS_PATH))
 
-def TIS_MAKE_TEST(test_no, test_name, expected_name, args, tis_config_file):
+def TIS_MAKE_TEST(test_no, machdep, test_name, expected_name, args, tis_config_file):
     print("===", str(test_no), ":", test_name, "===")
     # print("RUN", [path.join(HERE, "blake3")] + args)
 
@@ -38,7 +38,7 @@ def TIS_MAKE_TEST(test_no, test_name, expected_name, args, tis_config_file):
 
     tis_config_file.write(
 "  {\n\
-    \"name\": \"%s\",\n\
+    \"name\": \"%s (%s)\",\n\
     \"files\": [\n\
       \"tis-ci/test.c\",\n\
       \"c/main.c\",\n\
@@ -47,8 +47,8 @@ def TIS_MAKE_TEST(test_no, test_name, expected_name, args, tis_config_file):
       \"c/blake3_portable.c\"\n\
     ],\n\
     \"main\": \"main_wrapper\",\n\
-    \"compilation_cmd\": \"-I . -I c -DBLAKE3_TESTING -DBLAKE3_NO_SSE41 -DBLAKE3_NO_AVX2 -DBLAKE3_NO_AVX512 -U__clang__ -U__GNUC__ -U__x86_64__\",\n\
-    \"machdep\": \"gcc_x86_64\",\n\
+    \"compilation_cmd\": \"-I . -I c -DBLAKE3_TESTING -DBLAKE3_NO_SSE41 -DBLAKE3_NO_AVX2 -DBLAKE3_NO_AVX512 -U__clang__ -U__GNUC__ -U__x86_64__ -U__i386__\",\n\
+    \"machdep\": \"%s\",\n\
     \"filesystem\": {\n\
       \"files\": [\n\
         {\n\
@@ -61,7 +61,7 @@ def TIS_MAKE_TEST(test_no, test_name, expected_name, args, tis_config_file):
         }\n\
       ]\n\
     }%s%s\n\
-  }" % (name, input_filename, expected_filename, val_args_full, maybe_no_results)
+  }" % (name, machdep, machdep, input_filename, expected_filename, val_args_full, maybe_no_results)
     )
 
 
@@ -106,11 +106,9 @@ def main():
     tis_config_file.write("[")
 
     test_no = 0
+    beginning = 0
+    machdeps = ["gcc_x86_32", "gcc_x86_64"]
     for case in TEST_VECTORS["cases"]:
-        if test_no > 0:
-            tis_config_file.write(",\n")
-        else:
-            tis_config_file.write("\n")
 
         test_no += 1
         print("--- Test case", test_no, "---")
@@ -135,15 +133,20 @@ def main():
         write_test_vector_file(test_no, "expected_derive_key_xof", expected_derive_key_xof)
         write_test_vector_file(test_no, "expected_derive_key", expected_derive_key)
 
-
         # Test the default hash.
         test_hash = run_blake3([], input)
-        TIS_MAKE_TEST(test_no,
-                      "test_hash",
-                      "expected_hash",
-                      [],
-                      tis_config_file)
-        tis_config_file.write(",\n")
+        for machdep in machdeps:
+            if beginning != 0:
+                tis_config_file.write(",\n")
+            else:
+                beginning = 1
+                tis_config_file.write("\n")
+            TIS_MAKE_TEST(test_no,
+                          machdep,
+                          "test_hash",
+                          "expected_hash",
+                          [],
+                          tis_config_file)
         for line in test_hash.splitlines():
             assert expected_hash == line, \
                 "hash({}): {} != {}".format(input_len, expected_hash, line)
@@ -151,12 +154,14 @@ def main():
         # Test the extended hash.
         xof_len = len(expected_hash_xof) // 2
         test_hash_xof = run_blake3(["--length", str(xof_len)], input)
-        TIS_MAKE_TEST(test_no,
-                      "test_hash_xof",
-                      "expected_hash_xof",
-                      ["--length", str(xof_len)],
-                      tis_config_file)
-        tis_config_file.write(",\n")
+        for machdep in machdeps:
+            tis_config_file.write(",\n")
+            TIS_MAKE_TEST(test_no,
+                          machdep,
+                          "test_hash_xof",
+                          "expected_hash_xof",
+                          ["--length", str(xof_len)],
+                          tis_config_file)
         for line in test_hash_xof.splitlines():
             assert expected_hash_xof == line, \
                 "hash_xof({}): {} != {}".format(
@@ -164,12 +169,14 @@ def main():
 
         # Test the default keyed hash.
         test_keyed_hash = run_blake3(["--keyed", hex_key], input)
-        TIS_MAKE_TEST(test_no,
-                      "test_keyed_hash",
-                      "expected_keyed_hash",
-                      ["--keyed", hex_key.decode()],
-                      tis_config_file)
-        tis_config_file.write(",\n")
+        for machdep in machdeps:
+            tis_config_file.write(",\n")
+            TIS_MAKE_TEST(test_no,
+                          machdep,
+                          "test_keyed_hash",
+                          "expected_keyed_hash",
+                          ["--keyed", hex_key.decode()],
+                          tis_config_file)
         for line in test_keyed_hash.splitlines():
             assert expected_keyed_hash == line, \
                 "keyed_hash({}): {} != {}".format(
@@ -180,12 +187,14 @@ def main():
         test_keyed_hash_xof = run_blake3(
             ["--keyed", hex_key, "--length",
              str(xof_len)], input)
-        TIS_MAKE_TEST(test_no,
-                      "test_keyed_hash_xof",
-                      "expected_keyed_hash_xof",
-                      ["--keyed", hex_key.decode(), "--length", str(xof_len)],
-                      tis_config_file)
-        tis_config_file.write(",\n")
+        for machdep in machdeps:
+            tis_config_file.write(",\n")
+            TIS_MAKE_TEST(test_no,
+                          machdep,
+                          "test_keyed_hash_xof",
+                          "expected_keyed_hash_xof",
+                          ["--keyed", hex_key.decode(), "--length", str(xof_len)],
+                          tis_config_file)
         for line in test_keyed_hash_xof.splitlines():
             assert expected_keyed_hash_xof == line, \
                 "keyed_hash_xof({}): {} != {}".format(
@@ -193,12 +202,14 @@ def main():
 
         # Test the default derive key.
         test_derive_key = run_blake3(["--derive-key", context_string], input)
-        TIS_MAKE_TEST(test_no,
-                      "test_derive_key",
-                      "expected_derive_key",
-                      ["--derive-key", context_string],
-                      tis_config_file)
-        tis_config_file.write(",\n")
+        for machdep in machdeps:
+            tis_config_file.write(",\n")
+            TIS_MAKE_TEST(test_no,
+                          machdep,
+                          "test_derive_key",
+                          "expected_derive_key",
+                          ["--derive-key", context_string],
+                          tis_config_file)
         for line in test_derive_key.splitlines():
             assert expected_derive_key == line, \
                 "derive_key({}): {} != {}".format(
@@ -209,11 +220,14 @@ def main():
         test_derive_key_xof = run_blake3(
             ["--derive-key", context_string, "--length",
              str(xof_len)], input)
-        TIS_MAKE_TEST(test_no,
-                      "test_derive_key_xof",
-                      "expected_derive_key_xof",
-                      ["--derive-key", context_string, "--length", str(xof_len)],
-                      tis_config_file)
+        for machdep in machdeps:
+            tis_config_file.write(",\n")
+            TIS_MAKE_TEST(test_no,
+                          machdep,
+                          "test_derive_key_xof",
+                          "expected_derive_key_xof",
+                          ["--derive-key", context_string, "--length", str(xof_len)],
+                          tis_config_file)
         for line in test_derive_key_xof.splitlines():
             assert expected_derive_key_xof == line, \
                 "derive_key_xof({}): {} != {}".format(
