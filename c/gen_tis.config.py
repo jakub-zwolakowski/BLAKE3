@@ -107,7 +107,7 @@ def main():
 
     test_no = 0
     beginning = 0
-    machdeps = ["gcc_x86_32", "gcc_x86_64"]
+    machdeps = ["gcc_x86_32", "gcc_x86_64", "ppc_32", "ppc_64"]
     for case in TEST_VECTORS["cases"]:
 
         test_no += 1
