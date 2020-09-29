@@ -5,10 +5,10 @@ A command line utility for calculating
 Coreutils tools like `b2sum` or `md5sum`.
 
 ```
-b3sum 0.3.4
+b3sum 0.3.6
 
 USAGE:
-    b3sum [FLAGS] [OPTIONS] [file]...
+    b3sum [FLAGS] [OPTIONS] [FILE]...
 
 FLAGS:
     -c, --check       Reads BLAKE3 sums from the [file]s and checks them
@@ -36,12 +36,12 @@ OPTIONS:
                                   RAYON_NUM_THREADS is also respected.
 
 ARGS:
-    <file>...    Files to hash, or checkfiles to check. When no file is given,
+    <FILE>...    Files to hash, or checkfiles to check. When no file is given,
                  or when - is given, read standard input.
 ```
 
 See also [this document about how the `--check` flag
-works](./what_does_check_do.md).
+works](https://github.com/BLAKE3-team/BLAKE3/blob/master/b3sum/what_does_check_do.md).
 
 # Example
 
@@ -84,9 +84,3 @@ On Linux for example, Cargo will put the compiled binary in
 If you want to install directly from this directory, you can run `cargo
 install --path .`. Or you can just build with `cargo build --release`,
 which puts the binary at `./target/release/b3sum`.
-
-By default, `b3sum` enables the assembly implementations, AVX-512
-support, and multi-threading features of the underlying
-[`blake3`](https://crates.io/crates/blake3) crate. To avoid this (for
-example, if your C compiler does not support AVX-512), you can use
-Cargo's `--no-default-features` flag.
