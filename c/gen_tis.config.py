@@ -87,7 +87,7 @@ def make_test_input(length):
 
 def write_test_vector_file(test_no, name, content):
     print("-<", name, ">-")
-    file_name = "../trustinsoft/test_vectors/%02d_%s" % (test_no, name)
+    file_name = "trustinsoft/test_vectors/%02d_%s" % (test_no, name)
     # print(content)
     file = open(file_name, "w")
     file.write(content)
@@ -95,14 +95,14 @@ def write_test_vector_file(test_no, name, content):
 
 def write_test_vector_file_binary(test_no, name, content):
     print("-<", name, ">-")
-    file_name = "../trustinsoft/test_vectors/%02d_%s.bin" % (test_no, name)
+    file_name = "trustinsoft/test_vectors/%02d_%s.bin" % (test_no, name)
     # print(content[:32], "...")
     file = open(file_name, "wb")
     file.write(content)
     file.close()
 
 def main():
-    tis_config_file = open("test.py_tis.config", "w")
+    tis_config_file = open("tis.config", "w")
     tis_config_file.write("[")
 
     test_no = 0
