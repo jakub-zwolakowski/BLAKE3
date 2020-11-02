@@ -26,8 +26,8 @@ def TIS_MAKE_TEST(test_no, machdep, test_name, expected_name, args, tis_config_f
         val_args_full=",\n\
     \"val-args\": \"%s\"" % val_args
 
-    input_filename = "tis-ci/test_vectors/%02d_input.bin" % test_no
-    expected_filename = "tis-ci/test_vectors/%02d_%s" % (test_no, expected_name)
+    input_filename = "trustinsoft/test_vectors/%02d_input.bin" % test_no
+    expected_filename = "trustinsoft/test_vectors/%02d_%s" % (test_no, expected_name)
     print("  INPUT FILE = %s" % input_filename)
     print("  EXPECTED FILE = %s" % expected_filename)
 
@@ -40,7 +40,7 @@ def TIS_MAKE_TEST(test_no, machdep, test_name, expected_name, args, tis_config_f
 "  {\n\
     \"name\": \"%s (%s)\",\n\
     \"files\": [\n\
-      \"tis-ci/test.c\",\n\
+      \"trustinsoft/test.c\",\n\
       \"c/main.c\",\n\
       \"c/blake3.c\",\n\
       \"c/blake3_dispatch.c\",\n\
@@ -87,7 +87,7 @@ def make_test_input(length):
 
 def write_test_vector_file(test_no, name, content):
     print("-<", name, ">-")
-    file_name = "../tis-ci/test_vectors/%02d_%s" % (test_no, name)
+    file_name = "../trustinsoft/test_vectors/%02d_%s" % (test_no, name)
     # print(content)
     file = open(file_name, "w")
     file.write(content)
@@ -95,7 +95,7 @@ def write_test_vector_file(test_no, name, content):
 
 def write_test_vector_file_binary(test_no, name, content):
     print("-<", name, ">-")
-    file_name = "../tis-ci/test_vectors/%02d_%s.bin" % (test_no, name)
+    file_name = "../trustinsoft/test_vectors/%02d_%s.bin" % (test_no, name)
     # print(content[:32], "...")
     file = open(file_name, "wb")
     file.write(content)
