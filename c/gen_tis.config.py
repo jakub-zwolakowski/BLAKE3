@@ -7,62 +7,61 @@ import subprocess
 import shlex
 import base64
 
+# -------------
+
+import re # Regular expressions.
+
+# Outputting JSON.
+def string_of_json(obj):
+    # Output standard pretty-printed JSON (RFC 7159) with 4-space indentation.
+    s = json.dumps(obj,indent=4)
+    # Sometimes we need to have multiple "include" fields in the outputted JSON,
+    # which is unfortunately impossible in the internal python representation
+    # (OK, it is technically possible, but too cumbersome to bother implementing
+    # it here), so we can name these fields 'include_', 'include__', etc, and
+    # they are all converted to 'include' before outputting as JSON.
+    s = re.sub(r'"include_+"', '"include"', s)
+    return s
+
+# -------------
+
+
 HERE = path.dirname(__file__)
 TEST_VECTORS_PATH = path.join(HERE, "..", "test_vectors", "test_vectors.json")
 TEST_VECTORS = json.load(open(TEST_VECTORS_PATH))
 
-def TIS_MAKE_TEST(test_no, machdep, test_name, expected_name, args, tis_config_file):
+tis_config = []
+
+def tis_make_test(test_no, machdep, test_name, expected_name, args):
     print("===", str(test_no), ":", test_name, "===")
-    # print("RUN", [path.join(HERE, "blake3")] + args)
 
-    name = "Test vector %02d: %s" % (test_no, test_name)
-    print("  \"name\": \"%s\"" % name)
+    tis_test = {
+        "name": ("Test vector %02d: %s (%s)" % (test_no, test_name, machdep)),
+        "include": "trustinsoft/common.config",
+        "machdep": machdep,
+        "filesystem": {
+            "files": [
+                {
+                    "name": "tis-mkfs-stdin",
+                    "from": ("trustinsoft/test_vectors/%02d_input.bin" % test_no)
+                },
+                {
+                    "name": "expected",
+                    "from": ("trustinsoft/test_vectors/%02d_%s" % (test_no, expected_name))
+                }
+            ]
+        }
+    }
 
-    val_args_full=""
     if args:
-        # val_args = "%" + "%".join(map(shlex.quote, args))
-        val_args = "%" + "%".join(args)
-        print("  \"-val-args\": \"%s\"" % val_args)
-        val_args_full=",\n\
-        \"val-args\": \"%s\"" % val_args
+        tis_test["val-args"] = ("%" + "%".join(args))
 
-    input_filename = "trustinsoft/test_vectors/%02d_input.bin" % test_no
-    expected_filename = "trustinsoft/test_vectors/%02d_%s" % (test_no, expected_name)
-    print("  INPUT FILE = %s" % input_filename)
-    print("  EXPECTED FILE = %s" % expected_filename)
-
-    maybe_no_results=""
     if test_no >= 22:
-        maybe_no_results=",\n\
-        \"no-results\": true"
+        tis_test["no-results"] = True
 
-    tis_config_file.write(
-"    {\n\
-        \"name\": \"%s (%s)\",\n\
-        \"include\": \"trustinsoft/common.config\",\n\
-        \"machdep\": \"%s\",\n\
-        \"filesystem\": {\n\
-            \"files\": [\n\
-                {\n\
-                    \"name\": \"tis-mkfs-stdin\",\n\
-                    \"from\": \"%s\"\n\
-                },\n\
-                {\n\
-                    \"name\": \"expected\",\n\
-                    \"from\": \"%s\"\n\
-                }\n\
-            ]\n\
-        }%s%s\n\
-    }" % (name, machdep, machdep, input_filename, expected_filename, val_args_full, maybe_no_results)
-    )
+    tis_config.append(tis_test)
 
-
-def run_blake3(args, input):
-    output = subprocess.run([path.join(HERE, "blake3")] + args,
-                            input=input,
-                            stdout=subprocess.PIPE,
-                            check=True)
-    return output.stdout.decode().strip()
+    print(string_of_json(tis_test))
 
 
 # Fill the input with a repeating byte pattern. We use a cycle length of 251,
@@ -94,11 +93,7 @@ def write_test_vector_file_binary(test_no, name, content):
     file.close()
 
 def main():
-    tis_config_file = open("tis.config", "w")
-    tis_config_file.write("[")
-
     test_no = 0
-    beginning = 0
     machdeps = ["gcc_x86_32", "gcc_x86_64", "ppc_32", "ppc_64"]
     for case in TEST_VECTORS["cases"]:
 
@@ -118,115 +113,66 @@ def main():
         expected_derive_key = expected_derive_key_xof[:64]
 
         write_test_vector_file_binary(test_no, "input", input)
-        write_test_vector_file(test_no, "expected_hash_xof", expected_hash_xof)
-        write_test_vector_file(test_no, "expected_hash", expected_hash)
-        write_test_vector_file(test_no, "expected_keyed_hash_xof", expected_keyed_hash_xof)
-        write_test_vector_file(test_no, "expected_keyed_hash", expected_keyed_hash)
-        write_test_vector_file(test_no, "expected_derive_key_xof", expected_derive_key_xof)
-        write_test_vector_file(test_no, "expected_derive_key", expected_derive_key)
 
         # Test the default hash.
-        test_hash = run_blake3([], input)
+        write_test_vector_file(test_no, "expected_hash", expected_hash)
         for machdep in machdeps:
-            if beginning != 0:
-                tis_config_file.write(",\n")
-            else:
-                beginning = 1
-                tis_config_file.write("\n")
-            TIS_MAKE_TEST(test_no,
+            tis_make_test(test_no,
                           machdep,
                           "test_hash",
                           "expected_hash",
-                          [],
-                          tis_config_file)
-        for line in test_hash.splitlines():
-            assert expected_hash == line, \
-                "hash({}): {} != {}".format(input_len, expected_hash, line)
+                          [])
 
         # Test the extended hash.
+        write_test_vector_file(test_no, "expected_hash_xof", expected_hash_xof)
         xof_len = len(expected_hash_xof) // 2
-        test_hash_xof = run_blake3(["--length", str(xof_len)], input)
         for machdep in machdeps:
-            tis_config_file.write(",\n")
-            TIS_MAKE_TEST(test_no,
+            tis_make_test(test_no,
                           machdep,
                           "test_hash_xof",
                           "expected_hash_xof",
-                          ["--length", str(xof_len)],
-                          tis_config_file)
-        for line in test_hash_xof.splitlines():
-            assert expected_hash_xof == line, \
-                "hash_xof({}): {} != {}".format(
-                    input_len, expected_hash_xof, line)
+                          ["--length", str(xof_len)])
 
         # Test the default keyed hash.
-        test_keyed_hash = run_blake3(["--keyed", hex_key], input)
+        write_test_vector_file(test_no, "expected_keyed_hash", expected_keyed_hash)
         for machdep in machdeps:
-            tis_config_file.write(",\n")
-            TIS_MAKE_TEST(test_no,
+            tis_make_test(test_no,
                           machdep,
                           "test_keyed_hash",
                           "expected_keyed_hash",
-                          ["--keyed", hex_key.decode()],
-                          tis_config_file)
-        for line in test_keyed_hash.splitlines():
-            assert expected_keyed_hash == line, \
-                "keyed_hash({}): {} != {}".format(
-                    input_len, expected_keyed_hash, line)
+                          ["--keyed", hex_key.decode()])
 
         # Test the extended keyed hash.
+        write_test_vector_file(test_no, "expected_keyed_hash_xof", expected_keyed_hash_xof)
         xof_len = len(expected_keyed_hash_xof) // 2
-        test_keyed_hash_xof = run_blake3(
-            ["--keyed", hex_key, "--length",
-             str(xof_len)], input)
         for machdep in machdeps:
-            tis_config_file.write(",\n")
-            TIS_MAKE_TEST(test_no,
+            tis_make_test(test_no,
                           machdep,
                           "test_keyed_hash_xof",
                           "expected_keyed_hash_xof",
-                          ["--keyed", hex_key.decode(), "--length", str(xof_len)],
-                          tis_config_file)
-        for line in test_keyed_hash_xof.splitlines():
-            assert expected_keyed_hash_xof == line, \
-                "keyed_hash_xof({}): {} != {}".format(
-                    input_len, expected_keyed_hash_xof, line)
+                          ["--keyed", hex_key.decode(), "--length", str(xof_len)])
 
         # Test the default derive key.
-        test_derive_key = run_blake3(["--derive-key", context_string], input)
+        write_test_vector_file(test_no, "expected_derive_key", expected_derive_key)
         for machdep in machdeps:
-            tis_config_file.write(",\n")
-            TIS_MAKE_TEST(test_no,
+            tis_make_test(test_no,
                           machdep,
                           "test_derive_key",
                           "expected_derive_key",
-                          ["--derive-key", context_string],
-                          tis_config_file)
-        for line in test_derive_key.splitlines():
-            assert expected_derive_key == line, \
-                "derive_key({}): {} != {}".format(
-                    input_len, expected_derive_key, line)
+                          ["--derive-key", context_string])
 
         # Test the extended derive key.
+        write_test_vector_file(test_no, "expected_derive_key_xof", expected_derive_key_xof)
         xof_len = len(expected_derive_key_xof) // 2
-        test_derive_key_xof = run_blake3(
-            ["--derive-key", context_string, "--length",
-             str(xof_len)], input)
         for machdep in machdeps:
-            tis_config_file.write(",\n")
-            TIS_MAKE_TEST(test_no,
+            tis_make_test(test_no,
                           machdep,
                           "test_derive_key_xof",
                           "expected_derive_key_xof",
-                          ["--derive-key", context_string, "--length", str(xof_len)],
-                          tis_config_file)
-        for line in test_derive_key_xof.splitlines():
-            assert expected_derive_key_xof == line, \
-                "derive_key_xof({}): {} != {}".format(
-                    input_len, expected_derive_key_xof, line)
+                          ["--derive-key", context_string, "--length", str(xof_len)])
 
-    tis_config_file.write("\n]")
-    tis_config_file.close()
+    with open('tis.config', 'w') as f:
+        f.write(string_of_json(tis_config))
 
 
 if __name__ == "__main__":
