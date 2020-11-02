@@ -39,15 +39,7 @@ def TIS_MAKE_TEST(test_no, machdep, test_name, expected_name, args, tis_config_f
     tis_config_file.write(
 "  {\n\
     \"name\": \"%s (%s)\",\n\
-    \"files\": [\n\
-      \"trustinsoft/test.c\",\n\
-      \"c/main.c\",\n\
-      \"c/blake3.c\",\n\
-      \"c/blake3_dispatch.c\",\n\
-      \"c/blake3_portable.c\"\n\
-    ],\n\
-    \"main\": \"main_wrapper\",\n\
-    \"compilation_cmd\": \"-I . -I c -DBLAKE3_TESTING -DBLAKE3_NO_SSE41 -DBLAKE3_NO_AVX2 -DBLAKE3_NO_AVX512 -U__clang__ -U__GNUC__ -U__x86_64__ -U__i386__\",\n\
+    \"include\": \"trustinsoft/common.config\",\n\
     \"machdep\": \"%s\",\n\
     \"filesystem\": {\n\
       \"files\": [\n\
