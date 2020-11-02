@@ -24,7 +24,7 @@ def TIS_MAKE_TEST(test_no, machdep, test_name, expected_name, args, tis_config_f
         val_args = "%" + "%".join(args)
         print("  \"-val-args\": \"%s\"" % val_args)
         val_args_full=",\n\
-    \"val-args\": \"%s\"" % val_args
+        \"val-args\": \"%s\"" % val_args
 
     input_filename = "trustinsoft/test_vectors/%02d_input.bin" % test_no
     expected_filename = "trustinsoft/test_vectors/%02d_%s" % (test_no, expected_name)
@@ -34,26 +34,26 @@ def TIS_MAKE_TEST(test_no, machdep, test_name, expected_name, args, tis_config_f
     maybe_no_results=""
     if test_no >= 22:
         maybe_no_results=",\n\
-    \"no-results\": true"
+        \"no-results\": true"
 
     tis_config_file.write(
-"  {\n\
-    \"name\": \"%s (%s)\",\n\
-    \"include\": \"trustinsoft/common.config\",\n\
-    \"machdep\": \"%s\",\n\
-    \"filesystem\": {\n\
-      \"files\": [\n\
-        {\n\
-          \"name\": \"tis-mkfs-stdin\",\n\
-          \"from\": \"%s\"\n\
-        },\n\
-        {\n\
-          \"name\": \"expected\",\n\
-          \"from\": \"%s\"\n\
-        }\n\
-      ]\n\
-    }%s%s\n\
-  }" % (name, machdep, machdep, input_filename, expected_filename, val_args_full, maybe_no_results)
+"    {\n\
+        \"name\": \"%s (%s)\",\n\
+        \"include\": \"trustinsoft/common.config\",\n\
+        \"machdep\": \"%s\",\n\
+        \"filesystem\": {\n\
+            \"files\": [\n\
+                {\n\
+                    \"name\": \"tis-mkfs-stdin\",\n\
+                    \"from\": \"%s\"\n\
+                },\n\
+                {\n\
+                    \"name\": \"expected\",\n\
+                    \"from\": \"%s\"\n\
+                }\n\
+            ]\n\
+        }%s%s\n\
+    }" % (name, machdep, machdep, input_filename, expected_filename, val_args_full, maybe_no_results)
     )
 
 
