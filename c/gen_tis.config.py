@@ -1,13 +1,11 @@
 #! /usr/bin/env python3
 
-from binascii import hexlify
-import json
-from os import path
-import subprocess
-import shlex
-import base64
+import re # sub
+import json # dumps, load
+import os # path, makedirs
+import binascii # hexlify
 
-# This function copied from test.py :
+# Following function copied from test.py :
 # -----------------------------------------------------------------------------
 # Fill the input with a repeating byte pattern. We use a cycle length of 251,
 # because that's the largets prime number less than 256. This makes it unlikely
@@ -22,12 +20,10 @@ def make_test_input(length):
     return buf
 # -----------------------------------------------------------------------------
 
-import re # Regular expressions.
-from itertools import product # Cartesian product of lists.
-import json # JSON generation.
-import os # Write to files.
-import shutil # Copy file.
-import glob
+# Following line copied from test.py :
+# -----------------------------------------------------------------------------
+TEST_VECTORS_PATH = os.path.join("test_vectors", "test_vectors.json")
+# -----------------------------------------------------------------------------
 
 # Outputting JSON.
 def string_of_json(obj):
@@ -41,9 +37,9 @@ def string_of_json(obj):
     s = re.sub(r'"include_+"', '"include"', s)
     return s
 
-# ---------------------------------------------------------------------------- #
-# ---------------------------------- CHECKS ---------------------------------- #
-# ---------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
+# ---------------------------------- CHECKS --------------------------------- #
+# --------------------------------------------------------------------------- #
 
 def check_dir(dir):
     if os.path.isdir(dir):
@@ -57,9 +53,14 @@ def check_file(file):
     else:
         exit("File '%s' not found." % file)
 
-# ---------------------------------------------------------------------------- #
-# -------------------- GENERATE trustinsoft/common.config -------------------- #
-# ---------------------------------------------------------------------------- #
+# Initial check.
+print("1. Check if needed directories and files exist...")
+check_dir("trustinsoft")
+check_file(TEST_VECTORS_PATH)
+
+# --------------------------------------------------------------------------- #
+# -------------------- GENERATE trustinsoft/common.config ------------------- #
+# --------------------------------------------------------------------------- #
 
 def string_of_options(options):
     s = ''
@@ -86,7 +87,7 @@ def make_common_config():
         {
             "-I": [
                 "..",
-                "../c",
+                os.path.join("..", "c"),
             ],
             "-D": [
                 "BLAKE3_TESTING",
@@ -102,20 +103,27 @@ def make_common_config():
             ]
         }
     )
-    # Whole common.config.
+    # Whole common.config JSON.
     return {
-        "files": [ "test.c" ] + list(map(lambda file: "../c/" + file, c_files)),
+        "files": [ "test.c" ] +
+                 list(map(lambda file: os.path.join("..", "c", file), c_files)),
         "main": "main_wrapper",
-        "compilation_cmd": string_of_options(compilation_cmd)
+        "compilation_cmd": string_of_options(compilation_cmd),
     }
+
+common_config = make_common_config()
+with open(os.path.join("trustinsoft", "common.config"), "w") as file:
+    print("2. Generate the 'trustinsoft/common.config' file.")
+    file.write(string_of_json(common_config))
 
 # ---------------------------------------------------------------------------- #
 # -------------------------------- tis.config -------------------------------- #
 # ---------------------------------------------------------------------------- #
 
-HERE = path.dirname(__file__)
-TEST_VECTORS_PATH = path.join(HERE, "..", "test_vectors", "test_vectors.json")
+# Following line copied from test.py :
+# -----------------------------------------------------------------------------
 TEST_VECTORS = json.load(open(TEST_VECTORS_PATH))
+# -----------------------------------------------------------------------------
 
 machdeps = [
     "gcc_x86_32",
@@ -124,18 +132,19 @@ machdeps = [
     "gcc_ppc_64",
 ]
 
-test_vectors_dir = "trustinsoft/test_vectors/"
+test_vectors_dir = os.path.join("trustinsoft", "test_vectors")
 
 def test_vector_file(vector_no, name):
-    return test_vectors_dir + ("%02d_%s" % (vector_no, name))
+    filename = "%02d_%s" % (vector_no, name)
+    return os.path.join(test_vectors_dir, filename)
 
 def make_test(vector_no, case_name, args, machdep):
-    print("===", str(vector_no), ":", case_name, ":", machdep, "===")
+    # print("===", str(vector_no), ":", case_name, ":", machdep, "===") # Debug.
     # Base of the 'tis.config' entry.
     test = (
         {
             "name": ("Test vector %02d: %s (%s)" % (vector_no, case_name, machdep)),
-            "include": "trustinsoft/common.config",
+            "include": os.path.join("trustinsoft", "common.config"),
             "machdep": machdep,
             "filesystem": {
                 "files": [
@@ -155,17 +164,16 @@ def make_test(vector_no, case_name, args, machdep):
     if args:
         test["val-args"] = ("%" + "%".join(args))
     # Add field "no-results" for longest tests.
-    if vector_no >= 22:
+    if vector_no >= 35:
         test["no-results"] = True
     # Done.
-    print(string_of_json(test))
+    # print(string_of_json(test)) # Debug.
     return test
 
 def test_cases_of_test_vector(test_vector):
-
-    # Following lines copied from test.py
-    # -------------------------------------------------
-    hex_key = hexlify(TEST_VECTORS["key"].encode())
+    # Following lines copied from test.py :
+    # -------------------------------------------------------------------------
+    hex_key = binascii.hexlify(TEST_VECTORS["key"].encode())
     context_string = TEST_VECTORS["context_string"]
     expected_hash_xof = test_vector["hash"]
     expected_keyed_hash_xof = test_vector["keyed_hash"]
@@ -173,8 +181,7 @@ def test_cases_of_test_vector(test_vector):
     expected_keyed_hash = expected_keyed_hash_xof[:64]
     expected_derive_key_xof = test_vector["derive_key"]
     expected_derive_key = expected_derive_key_xof[:64]
-    # -------------------------------------------------
-
+    # -------------------------------------------------------------------------
     return (
         [
             # Test the default hash.
@@ -219,17 +226,20 @@ def test_cases_of_test_vector(test_vector):
     )
 
 def make_tis_config_and_generate_test_vector_files():
+    # Prepare.
     tis_config = []
+    os.makedirs(test_vectors_dir, exist_ok=True)
     vector_no = 0
+    # Treat each test vector.
     for test_vector in TEST_VECTORS["cases"]:
         vector_no += 1
-        print("--- Test vector ", vector_no, "---")
+        # print("--- Test vector ", vector_no, "---") # Debug.
 
         # Following lines copied from test.py :
-        # -------------------------------------
+        # ---------------------------------------------------------------------
         input_len = test_vector["input_len"]
         input = make_test_input(input_len)
-        # -------------------------------------
+        # ---------------------------------------------------------------------
 
         # Write the input file for this test vector.
         input_file = test_vector_file(vector_no, "input")
@@ -246,31 +256,13 @@ def make_tis_config_and_generate_test_vector_files():
             # Generate an entry in the tis.config file.
             # (One entry for each vector * case * machdep combination.)
             for machdep in machdeps:
-                tis_test = make_test(vector_no, test_case["name"],
-                                     test_case["args"], machdep)
-                tis_config.append(tis_test)
+                test = make_test(vector_no, test_case["name"],
+                                 test_case["args"], machdep)
+                tis_config.append(test)
 
     return tis_config
 
-
-# ---------------------------------------------------------------------------- #
-# ----------------------------------- MAIN ----------------------------------- #
-# ---------------------------------------------------------------------------- #
-
-def main():
-    print("1. Check if needed directories and files exist...")
-    check_dir('trustinsoft')
-
-    common_config = make_common_config()
-    with open("trustinsoft/common.config", "w") as file:
-        print("2. Generate the 'trustinsoft/common.config' file.")
-        file.write(string_of_json(common_config))
-
-    tis_config = make_tis_config_and_generate_test_vector_files()
-    with open("tis.config", "w") as file:
-        print("3. Generate the tis.config file.")
-        file.write(string_of_json(tis_config))
-
-
-if __name__ == "__main__":
-    main()
+tis_config = make_tis_config_and_generate_test_vector_files()
+with open("tis.config", "w") as file:
+    print("3. Generate the tis.config file and test vector files.")
+    file.write(string_of_json(tis_config))
