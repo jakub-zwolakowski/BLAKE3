@@ -43,7 +43,7 @@ def tis_make_test(test_no, machdep, test_name, expected_name, args):
             "files": [
                 {
                     "name": "tis-mkfs-stdin",
-                    "from": ("trustinsoft/test_vectors/%02d_input.bin" % test_no)
+                    "from": ("trustinsoft/test_vectors/%02d_input" % test_no)
                 },
                 {
                     "name": "expected",
@@ -64,6 +64,10 @@ def tis_make_test(test_no, machdep, test_name, expected_name, args):
     print(string_of_json(tis_test))
 
 
+
+# This function copied from test.py
+# ---------------------------------
+
 # Fill the input with a repeating byte pattern. We use a cycle length of 251,
 # because that's the largets prime number less than 256. This makes it unlikely
 # to swapping any two adjacent input blocks or chunks will give the same
@@ -76,21 +80,19 @@ def make_test_input(length):
         i = (i + 1) % 251
     return buf
 
+# ---------------------------------
+
 def write_test_vector_file(test_no, name, content):
     print("-<", name, ">-")
-    file_name = "trustinsoft/test_vectors/%02d_%s" % (test_no, name)
-    # print(content)
-    file = open(file_name, "w")
-    file.write(content)
-    file.close()
+    file_path = "trustinsoft/test_vectors/%02d_%s" % (test_no, name)
+    with open(file_path, "w") as file:
+        file.write(content)
 
 def write_test_vector_file_binary(test_no, name, content):
     print("-<", name, ">-")
-    file_name = "trustinsoft/test_vectors/%02d_%s.bin" % (test_no, name)
-    # print(content[:32], "...")
-    file = open(file_name, "wb")
-    file.write(content)
-    file.close()
+    file_path = "trustinsoft/test_vectors/%02d_%s" % (test_no, name)
+    with open(file_path, "wb") as file:
+        file.write(content)
 
 def main():
     test_no = 0
@@ -100,6 +102,8 @@ def main():
         test_no += 1
         print("--- Test case", test_no, "---")
 
+        # Following lines copied from test.py
+        # -----------------------------------
         input_len = case["input_len"]
         input = make_test_input(input_len)
         key = TEST_VECTORS["key"]
@@ -111,6 +115,7 @@ def main():
         expected_keyed_hash = expected_keyed_hash_xof[:64]
         expected_derive_key_xof = case["derive_key"]
         expected_derive_key = expected_derive_key_xof[:64]
+        # -----------------------------------
 
         write_test_vector_file_binary(test_no, "input", input)
 
