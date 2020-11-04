@@ -5,7 +5,7 @@ import json # dumps, load
 import os # path, makedirs
 import binascii # hexlify
 
-# Following function copied from test.py :
+# Following function copied from c/test.py :
 # -----------------------------------------------------------------------------
 # Fill the input with a repeating byte pattern. We use a cycle length of 251,
 # because that's the largets prime number less than 256. This makes it unlikely
@@ -20,7 +20,7 @@ def make_test_input(length):
     return buf
 # -----------------------------------------------------------------------------
 
-# Following line copied from test.py :
+# Following line copied from c/test.py :
 # -----------------------------------------------------------------------------
 TEST_VECTORS_PATH = os.path.join("test_vectors", "test_vectors.json")
 # -----------------------------------------------------------------------------
@@ -118,7 +118,7 @@ with open(os.path.join("trustinsoft", "common.config"), "w") as file:
 # -------------------------------- tis.config -------------------------------- #
 # ---------------------------------------------------------------------------- #
 
-# Following line copied from test.py :
+# Following line copied from c/test.py :
 # -----------------------------------------------------------------------------
 TEST_VECTORS = json.load(open(TEST_VECTORS_PATH))
 # -----------------------------------------------------------------------------
@@ -169,7 +169,7 @@ def make_test(vector_no, case_name, args, machdep):
     return test
 
 def test_cases_of_test_vector(test_vector):
-    # Following lines copied from test.py :
+    # Following lines copied from c/test.py :
     # -------------------------------------------------------------------------
     hex_key = binascii.hexlify(TEST_VECTORS["key"].encode())
     context_string = TEST_VECTORS["context_string"]
@@ -233,7 +233,7 @@ def make_tis_config_and_generate_test_vector_files():
         vector_no += 1
         # print("--- Test vector ", vector_no, "---") # Debug.
 
-        # Following lines copied from test.py :
+        # Following lines copied from c/test.py :
         # ---------------------------------------------------------------------
         input_len = test_vector["input_len"]
         input = make_test_input(input_len)
