@@ -77,7 +77,6 @@ def string_of_options(options):
 def make_common_config():
     # C files.
     c_files = [
-        "main.c",
         "blake3.c",
         "blake3_dispatch.c",
         "blake3_portable.c",
@@ -107,7 +106,6 @@ def make_common_config():
     return {
         "files": [ "test.c" ] +
                  list(map(lambda file: os.path.join("..", "c", file), c_files)),
-        "main": "main_wrapper",
         "compilation_cmd": string_of_options(compilation_cmd),
     }
 
