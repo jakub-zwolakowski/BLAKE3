@@ -1,5 +1,10 @@
 #! /usr/bin/env python3
 
+# This script regenerates TrustInSoft CI configuration.
+
+# Run from the root of the BLAKE3 project:
+# $ python3 trustinsoft/regenerate.py
+
 import re # sub
 import json # dumps, load
 import os # path, makedirs
