@@ -33,12 +33,13 @@ TEST_VECTORS_PATH = os.path.join("test_vectors", "test_vectors.json")
 # Outputting JSON.
 def string_of_json(obj):
     # Output standard pretty-printed JSON (RFC 7159) with 4-space indentation.
-    s = json.dumps(obj,indent=4)
-    # Sometimes we need to have multiple "include" fields in the outputted JSON,
-    # which is unfortunately impossible in the internal python representation
-    # (OK, it is technically possible, but too cumbersome to bother implementing
-    # it here), so we can name these fields 'include_', 'include__', etc, and
-    # they are all converted to 'include' before outputting as JSON.
+    s = json.dumps(obj, indent=4)
+    # Sometimes we need to have multiple "include" fields in the outputted
+    # JSON, which is unfortunately impossible in the internal python
+    # representation (OK, it is technically possible, but too cumbersome to
+    # bother implementing it here), so we can name these fields 'include_',
+    # 'include__', etc, and they are all converted to 'include' before
+    # outputting as JSON.
     s = re.sub(r'"include_+"', '"include"', s)
     return s
 
@@ -66,6 +67,8 @@ check_file(TEST_VECTORS_PATH)
 # --------------------------------------------------------------------------- #
 # -------------------- GENERATE trustinsoft/common.config ------------------- #
 # --------------------------------------------------------------------------- #
+
+common_config_path = os.path.join("trustinsoft", "common.config")
 
 def string_of_options(options):
     s = ''
@@ -104,7 +107,7 @@ def make_common_config():
                 "__GNUC__",
                 "__x86_64__",
                 "__i386__",
-            ]
+            ],
         }
     )
     # Whole common.config JSON.
@@ -115,17 +118,19 @@ def make_common_config():
     }
 
 common_config = make_common_config()
-with open(os.path.join("trustinsoft", "common.config"), "w") as file:
+with open(common_config_path, "w") as file:
     print("2. Generate the 'trustinsoft/common.config' file.")
     file.write(string_of_json(common_config))
 
-# ---------------------------------------------------------------------------- #
-# -------------------------------- tis.config -------------------------------- #
-# ---------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
+# -------------------------------- tis.config ------------------------------- #
+# --------------------------------------------------------------------------- #
 
 # Following line copied from c/test.py :
 # -----------------------------------------------------------------------------
 TEST_VECTORS = json.load(open(TEST_VECTORS_PATH))
+hex_key = binascii.hexlify(TEST_VECTORS["key"].encode())
+context_string = TEST_VECTORS["context_string"]
 # -----------------------------------------------------------------------------
 
 machdeps = [
@@ -141,26 +146,27 @@ def test_vector_file(vector_no, name):
     filename = "%02d_%s" % (vector_no, name)
     return os.path.join(test_vectors_dir, filename)
 
-def make_test(vector_no, case_name, args, machdep):
-    # print("===", str(vector_no), ":", case_name, ":", machdep, "===") # Debug.
-    # Base of the 'tis.config' entry.
+def make_test(vector_no, test_case, machdep):
+    name = test_case["name"]
+    args = test_case["args"]
+    # Base of the single tis.config entry.
     test = (
         {
-            "name": ("Test vector %02d: %s (%s)" % (vector_no, case_name, machdep)),
-            "include": os.path.join("trustinsoft", "common.config"),
+            "name": ("Test vector %02d: %s (%s)" % (vector_no, name, machdep)),
+            "include": common_config_path,
             "machdep": machdep,
             "filesystem": {
                 "files": [
                     {
                         "name": "tis-mkfs-stdin",
-                        "from": test_vector_file(vector_no, "input")
+                        "from": test_vector_file(vector_no, "input"),
                     },
                     {
                         "name": "expected",
-                        "from": test_vector_file(vector_no, "expected_" + case_name)
-                    }
-                ]
-            }
+                        "from": test_vector_file(vector_no, "expected_" + name),
+                    },
+                ],
+            },
         }
     )
     # Add the field "val-args" if command line arguments are present.
@@ -170,14 +176,11 @@ def make_test(vector_no, case_name, args, machdep):
     if vector_no >= 35:
         test["no-results"] = True
     # Done.
-    # print(string_of_json(test)) # Debug.
     return test
 
 def test_cases_of_test_vector(test_vector):
     # Following lines copied from c/test.py :
     # -------------------------------------------------------------------------
-    hex_key = binascii.hexlify(TEST_VECTORS["key"].encode())
-    context_string = TEST_VECTORS["context_string"]
     expected_hash_xof = test_vector["hash"]
     expected_keyed_hash_xof = test_vector["keyed_hash"]
     expected_hash = expected_hash_xof[:64]
@@ -216,7 +219,7 @@ def test_cases_of_test_vector(test_vector):
             {
                 "name": "derive_key",
                 "expected": expected_derive_key,
-                "args": ["--derive-key", context_string]
+                "args": ["--derive-key", context_string],
             },
             # Test the extended derive key.
             {
@@ -236,15 +239,14 @@ def make_tis_config_and_generate_test_vector_files():
     # Treat each test vector.
     for test_vector in TEST_VECTORS["cases"]:
         vector_no += 1
-        # print("--- Test vector ", vector_no, "---") # Debug.
+        print("   > Test vector %2d" % vector_no) # Debug.
 
+        # Write the input file for this test vector.
         # Following lines copied from c/test.py :
         # ---------------------------------------------------------------------
         input_len = test_vector["input_len"]
         input = make_test_input(input_len)
         # ---------------------------------------------------------------------
-
-        # Write the input file for this test vector.
         input_file = test_vector_file(vector_no, "input")
         with open(input_file, "wb") as file:
             file.write(input)
@@ -252,17 +254,17 @@ def make_tis_config_and_generate_test_vector_files():
         # Treat each test case in this test vector.
         for test_case in test_cases_of_test_vector(test_vector):
             # Write the expected output file for this test case.
-            expected_file = test_vector_file(vector_no,
-                                             "expected_" + test_case["name"])
+            expected_name = "expected_" + test_case["name"]
+            expected_file = test_vector_file(vector_no, expected_name)
             with open(expected_file, "w") as file:
                 file.write(test_case["expected"])
             # Generate an entry in the tis.config file.
             # (One entry for each vector * case * machdep combination.)
             for machdep in machdeps:
-                test = make_test(vector_no, test_case["name"],
-                                 test_case["args"], machdep)
+                test = make_test(vector_no, test_case, machdep)
                 tis_config.append(test)
 
+    # Done.
     return tis_config
 
 tis_config = make_tis_config_and_generate_test_vector_files()
