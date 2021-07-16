@@ -40,7 +40,7 @@ def TIS_MAKE_TEST(test_no, machdep, test_name, expected_name, args, tis_config_f
 "  {\n\
     \"name\": \"%s (%s)\",\n\
     \"files\": [\n\
-      \"../tis/test.c\",\n\
+      \"test.c\",\n\
       \"../c/main.c\",\n\
       \"../c/blake3.c\",\n\
       \"../c/blake3_dispatch.c\",\n\
