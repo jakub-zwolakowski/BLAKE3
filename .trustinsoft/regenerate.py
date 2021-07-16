@@ -3,6 +3,7 @@
 from binascii import hexlify
 import json
 from os import path
+from os import makedirs
 import subprocess
 import shlex
 import base64
@@ -26,8 +27,8 @@ def TIS_MAKE_TEST(test_no, machdep, test_name, expected_name, args, tis_config_f
         val_args_full=",\n\
     \"val-args\": \"%s\"" % val_args
 
-    input_filename = "../tis/test_vectors/%02d_input.bin" % test_no
-    expected_filename = "../tis/test_vectors/%02d_%s" % (test_no, expected_name)
+    input_filename = "test_vectors/%02d_input.bin" % test_no
+    expected_filename = "test_vectors/%02d_%s" % (test_no, expected_name)
     print("  INPUT FILE = %s" % input_filename)
     print("  EXPECTED FILE = %s" % expected_filename)
 
@@ -88,7 +89,7 @@ def make_test_input(length):
 
 def write_test_vector_file(test_no, name, content):
     print("-<", name, ">-")
-    file_name = path.join(HERE, "..", "tis", "test_vectors", "%02d_%s" % (test_no, name))
+    file_name = path.join(HERE, "test_vectors", "%02d_%s" % (test_no, name))
     # print(content)
     file = open(file_name, "w")
     file.write(content)
@@ -96,13 +97,15 @@ def write_test_vector_file(test_no, name, content):
 
 def write_test_vector_file_binary(test_no, name, content):
     print("-<", name, ">-")
-    file_name = path.join(HERE, "..", "tis", "test_vectors", "%02d_%s.bin" % (test_no, name))
+    file_name = path.join(HERE, "test_vectors", "%02d_%s.bin" % (test_no, name))
     # print(content[:32], "...")
     file = open(file_name, "wb")
     file.write(content)
     file.close()
 
 def main():
+    makedirs(path.join(HERE, "test_vectors"), exist_ok=True)
+
     tis_config_file = open("config.json", "w")
     tis_config_file.write("[")
 
