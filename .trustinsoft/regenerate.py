@@ -26,8 +26,8 @@ def TIS_MAKE_TEST(test_no, machdep, test_name, expected_name, args, tis_config_f
         val_args_full=",\n\
     \"val-args\": \"%s\"" % val_args
 
-    input_filename = "tis/test_vectors/%02d_input.bin" % test_no
-    expected_filename = "tis/test_vectors/%02d_%s" % (test_no, expected_name)
+    input_filename = "../tis/test_vectors/%02d_input.bin" % test_no
+    expected_filename = "../tis/test_vectors/%02d_%s" % (test_no, expected_name)
     print("  INPUT FILE = %s" % input_filename)
     print("  EXPECTED FILE = %s" % expected_filename)
 
@@ -40,14 +40,14 @@ def TIS_MAKE_TEST(test_no, machdep, test_name, expected_name, args, tis_config_f
 "  {\n\
     \"name\": \"%s (%s)\",\n\
     \"files\": [\n\
-      \"tis/test.c\",\n\
-      \"c/main.c\",\n\
-      \"c/blake3.c\",\n\
-      \"c/blake3_dispatch.c\",\n\
-      \"c/blake3_portable.c\"\n\
+      \"../tis/test.c\",\n\
+      \"../c/main.c\",\n\
+      \"../c/blake3.c\",\n\
+      \"../c/blake3_dispatch.c\",\n\
+      \"../c/blake3_portable.c\"\n\
     ],\n\
     \"main\": \"main_wrapper\",\n\
-    \"compilation_cmd\": \"-I . -I c -DBLAKE3_TESTING -DBLAKE3_NO_SSE41 -DBLAKE3_NO_AVX2 -DBLAKE3_NO_AVX512 -U__clang__ -U__GNUC__ -U__x86_64__ -U__i386__\",\n\
+    \"compilation_cmd\": \"-I .. -I ../c -DBLAKE3_TESTING -DBLAKE3_NO_SSE41 -DBLAKE3_NO_AVX2 -DBLAKE3_NO_AVX512 -U__clang__ -U__GNUC__ -U__x86_64__ -U__i386__\",\n\
     \"machdep\": \"%s\",\n\
     \"filesystem\": {\n\
       \"files\": [\n\
@@ -66,7 +66,7 @@ def TIS_MAKE_TEST(test_no, machdep, test_name, expected_name, args, tis_config_f
 
 
 def run_blake3(args, input):
-    blake3_path = path.join(HERE, "blake3")
+    blake3_path = path.join(HERE, "..", "c", "blake3")
     output = subprocess.run([blake3_path] + args,
                             input=input,
                             stdout=subprocess.PIPE,
@@ -103,7 +103,7 @@ def write_test_vector_file_binary(test_no, name, content):
     file.close()
 
 def main():
-    tis_config_file = open("tis.config", "w")
+    tis_config_file = open("config.json", "w")
     tis_config_file.write("[")
 
     test_no = 0
