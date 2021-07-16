@@ -31,6 +31,11 @@ def TIS_MAKE_TEST(test_no, machdep, test_name, expected_name, args, tis_config_f
     print("  INPUT FILE = %s" % input_filename)
     print("  EXPECTED FILE = %s" % expected_filename)
 
+    maybe_no_results=""
+    if test_no >= 22:
+        maybe_no_results=",\n\
+    \"no-results\": true"
+
     tis_config_file.write(
 "  {\n\
     \"name\": \"%s (%s)\",\n\
@@ -55,13 +60,14 @@ def TIS_MAKE_TEST(test_no, machdep, test_name, expected_name, args, tis_config_f
           \"from\": \"%s\"\n\
         }\n\
       ]\n\
-    }%s\n\
-  }" % (name, machdep, machdep, input_filename, expected_filename, val_args_full)
+    }%s%s\n\
+  }" % (name, machdep, machdep, input_filename, expected_filename, val_args_full, maybe_no_results)
     )
 
 
 def run_blake3(args, input):
-    output = subprocess.run([path.join(HERE, "blake3")] + args,
+    blake3_path = path.join(HERE, "blake3")
+    output = subprocess.run([blake3_path] + args,
                             input=input,
                             stdout=subprocess.PIPE,
                             check=True)
@@ -82,7 +88,7 @@ def make_test_input(length):
 
 def write_test_vector_file(test_no, name, content):
     print("-<", name, ">-")
-    file_name = "../tis/test_vectors/%02d_%s" % (test_no, name)
+    file_name = path.join(HERE, "..", "tis", "test_vectors", "%02d_%s" % (test_no, name))
     # print(content)
     file = open(file_name, "w")
     file.write(content)
@@ -90,14 +96,14 @@ def write_test_vector_file(test_no, name, content):
 
 def write_test_vector_file_binary(test_no, name, content):
     print("-<", name, ">-")
-    file_name = "../tis/test_vectors/%02d_%s.bin" % (test_no, name)
+    file_name = path.join(HERE, "..", "tis", "test_vectors", "%02d_%s.bin" % (test_no, name))
     # print(content[:32], "...")
     file = open(file_name, "wb")
     file.write(content)
     file.close()
 
 def main():
-    tis_config_file = open("test.py_tis.config", "w")
+    tis_config_file = open("tis.config", "w")
     tis_config_file.write("[")
 
     test_no = 0
